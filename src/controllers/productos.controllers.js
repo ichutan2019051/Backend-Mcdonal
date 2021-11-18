@@ -3,6 +3,7 @@
 var User = require('../models/user.models');
 var Producto = require('../models/productos.models');
 
+// funcion de producto maestro
 function setProducto(req, res) {
     var userId = req.user.sub;
     var params = req.body;
@@ -15,16 +16,16 @@ function setProducto(req, res) {
             Producto.findOne({name: params.name, empresa: userId}, (err, ProductoFind) => {
                 if(err) return res.status(500).send({ message:  "Error general"})
                 if(ProductoFind) return res.status(500).send({ message: "El producto ya existe"})
-                    producto.name =  producto.name
-                    producto.proveedor =  producto.proveedor
+                    producto.name =  params.name
+                    producto.proveedor =  params.proveedor
                     producto.stock = params.stock
-                    producto.cantidad = params.cantidad
+                    producto.cantidad = 0
                     producto.empresa = userId
 
                     producto.save((err, productosave) => {
                         if(err) return res.status(500).send({ message:  "Error general"})
                         if(!productosave) return re.status(500).send({ message: "No se a podido guardar el producto maestro"})
-                        return res.status(200).send({ message: "Producto Guardado, "},productossave)
+                        return res.status(200).send({ message: "Producto Guardado, ", productosave})
                     })
             })
         } else {
@@ -33,6 +34,7 @@ function setProducto(req, res) {
     }
 }
 
+// funcion para asignar productos
 function setAsignarProducto(req, res){
     var userId = req.user.sub;
     var empleadoid = req.params.IdE;
@@ -51,38 +53,37 @@ function setAsignarProducto(req, res){
                 if(!ProductoEFind){
                     producto.name =  ProductoMFind.name
                     producto.proveedor =  ProductoMFind.proveedor
-                    producto.stock = params.stock
-                    producto.cantidad = params.cantidad
+                    producto.stock = params.cantidad
+                    producto.cantidad = 0
                     producto.empresa = empleadoid
 
-                    Producto.findByIdAndUpdate(ProductoMFind._id, {stock: ProductoMFind.stock - params.stock,
-                                                                    cantidad: ProductoMFind.cantidad - params.cantidad},
+                    Producto.findByIdAndUpdate(ProductoMFind._id, {stock: ProductoMFind.stock - params.cantidad,
+                                                                    cantidad: ProductoMFind.cantidad + params.cantidad},
                          { new: true }, (err, ProductoUpdate)=>{
                         if(err) return res.status(500).send({ message: 'Error en la peticion' });
-                        if(!usuarioActualizado) return res.status(404).send({ message: 'No se ha podido actualizar el producto' });
+                        if(!ProductoUpdate) return res.status(404).send({ message: 'No se ha podido actualizar el producto' });
                         
                         producto.save((err, productosave) => {
                             if(err) return res.status(500).send({ message:  "Error general"})
                             if(!productosave) return re.status(500).send({ message: "No se a podido guardar el producto maestro"})
-                            return res.status(200).send({ message: "Producto Guardado, "},productossave)
+                            return res.status(200).send({ message: "Producto Guardado, ", productosave})
                         })
                     })
                         
                 }else{
 
-                    Producto.findByIdAndUpdate(ProductoMFind._id, {stock: ProductoMFind.stock - params.stock,
-                        cantidad: ProductoMFind.cantidad - params.cantidad},
+                    Producto.findByIdAndUpdate(ProductoMFind._id, {stock: ProductoMFind.stock - params.cantidad,
+                        cantidad: ProductoMFind.cantidad + params.cantidad},
                         { new: true }, (err, ProductoUpdate)=>{
                         if(err) return res.status(500).send({ message: 'Error en la peticion' });
                         if(!ProductoUpdate) return res.status(404).send({ message: 'No se ha podido actualizar el producto' });
 
-                        Producto.findByIdAndUpdate(ProductoEFind._id, {stock: ProductoEFind.stock + params.stock,
-                            cantidad: ProductoEFind.cantidad + params.cantidad},
+                        Producto.findByIdAndUpdate(ProductoEFind._id, {stock: ProductoEFind.stock + params.stock},
                             { new: true }, (err, ProductoUpdate2)=>{
                             if(err) return res.status(500).send({ message: 'Error en la peticion' });
                             if(!ProductoUpdate2) return res.status(404).send({ message: 'No se ha podido actualizar el producto' });
     
-                            return res.status(200).send({ message: "Producto Actualizado, "},ProductoUpdate2)
+                            return res.status(200).send({ message: "Producto Actualizado, ", ProductoUpdate2})
                         })
                     })
 
