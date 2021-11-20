@@ -15,7 +15,14 @@ function setProducto(req, res) {
         if (params.name && params.proveedor && params.stock) {
             Producto.findOne({name: params.name, empresa: userId}, (err, ProductoFind) => {
                 if(err) return res.status(500).send({ message:  "Error general"})
-                if(ProductoFind) return res.status(500).send({ message: "El producto ya existe"})
+                if(ProductoFind){
+                    Producto.findByIdAndUpdate(ProductoFind._id, {stock: ProductoFind.stock + params.stock},
+                        {new: true}, (err, ProductoUpdate) => {
+                            if(err) return res.status(500).send({ message: "Error general"})
+                            if(!ProductoUpdate) return res.status(500).send({ message: "No sea podido actualizar el producto"})
+                            return res.status(200).send(ProductoUpdate)
+                        })
+                }else{
                     producto.name =  params.name
                     producto.proveedor =  params.proveedor
                     producto.stock = params.stock
@@ -27,6 +34,7 @@ function setProducto(req, res) {
                         if(!productosave) return re.status(500).send({ message: "No se a podido guardar el producto maestro"})
                         return res.status(200).send({ message: "Producto Guardado, ", productosave})
                     })
+                }
             })
         } else {
             return res.send({ message: 'Por favor ingresa los datos obligatorios' });
@@ -37,7 +45,7 @@ function setProducto(req, res) {
 // funcion para asignar productos
 function setAsignarProducto(req, res){
     var userId = req.user.sub;
-    var empleadoid = req.params.IdE;
+    var empleadoid = req.params.idE;
     var params = req.body;
     var producto = new Producto();
 
@@ -51,6 +59,8 @@ function setAsignarProducto(req, res){
             Producto.findOne({name: params.name, empresa: empleadoid}, (err, ProductoEFind) => {
                 if(err) return res.status(500).send({ message: "Error general"})
                 if(!ProductoEFind){
+                    if(ProductoMFind.stock < params.cantidad) return res.status(500).send({message:"No existen productos suficientes"})
+
                     producto.name =  ProductoMFind.name
                     producto.proveedor =  ProductoMFind.proveedor
                     producto.stock = params.cantidad
@@ -71,6 +81,8 @@ function setAsignarProducto(req, res){
                     })
                         
                 }else{
+
+                    if(ProductoMFind.stock < params.cantidad) return res.status(500).send({message:"No existen productos suficientes"})
 
                     Producto.findByIdAndUpdate(ProductoMFind._id, {stock: ProductoMFind.stock - params.cantidad,
                         cantidad: ProductoMFind.cantidad + params.cantidad},
@@ -95,24 +107,26 @@ function setAsignarProducto(req, res){
 
 function store(req, res) {
     var userId = req.user.sub;
-    var productoId = req.params.IdP;
+    var productoId = req.params.idP;
     var params = req.body;
 
     if (userId != req.user.sub) {
         return res.status(500).send({ message: 'No tienes permiso para realizar esta acción' })
     } else {
-        Producto.findOne( productoId, (err, productoFind) => {
-            if (err) {
-                return res.status(500).send({ message: 'Error general'})
-            }else if (productoFind.stock < params.cant){
-                return res.send({ message: 'Producto insuficiente.' })
-            }else{
-                Producto.findByIdAndUpdate(productoFind, { $inc: { cantidad: params.cant } }, { new: true }, (err, aumento) => {
-                })
-                Producto.findByIdAndUpdate(productoFind, { $inc: { stock: -params.cant } }, { new: true }, (err, aumento) => {
-                })
-                return res.status(200).send({message: 'La compra se realizo con exito'})
-            }
+        Producto.findOne( {_id: productoId}, (err, productoFind) => {
+            if(err) return res.status(500).send({message: "Error general"})
+            if(!productoFind) return res.status({message: "No existe producto en esta sucursal"})
+
+            if(productoFind.stock < params.cantidad) return res.status(500).send({message:"No existen productos suficientes"})
+
+            Producto.findByIdAndUpdate(productoId, {stock: productoFind.stock - params.cantidad,
+                cantidad: productoFind.cantidad + params.cantidad},
+                { new: true }, (err, ProductoUpdate)=>{
+                if(err) return res.status(500).send({ message: 'Error en la peticion' });
+                if(!ProductoUpdate) return res.status(404).send({ message: 'No se ha podido actualizar el producto' });
+                return res.status(200).send({ message: "Venda realizada, ", ProductoUpdate})
+            })
+
         })
     }
 }
